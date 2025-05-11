@@ -1,0 +1,32 @@
+# Node.js modules
+node_modules/
+
+# Environment files
+.env
+.bakatku-firebase-adminsdk-fbsvc-5529ea8bc9.json
+
+# Log files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor settings
+.vscode/
+
+# Build output
+dist/
+build/
+
+# Coverage files
+coverage/
+
+# Local cache
+.cache/
+
+# Next.js or similar (jika ada)
+.next/
+out/
