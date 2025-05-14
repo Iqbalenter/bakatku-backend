@@ -124,5 +124,36 @@ const updateProgressTitle = async (req, res) => {
     }
 };
 
+const getProgress = async (req, res) => {
+    try {
+        const userId = req.auth.id;
 
-module.exports = { addProgress, updateProgressTitle };
+        const docRef = firestore.collection('user').doc(userId).collection('progress').doc('progress_data');
+        const docSnap = await docRef.get();
+
+        if (!docSnap.exists) {
+            return res.status(404).json({
+                code: 404,
+                status: 'Not Found',
+                data: { message: 'No progress data found for this user' }
+            });
+        }
+
+        return res.status(200).json({
+            code: 200,
+            status: 'success',
+            data: docSnap.data()
+        });
+    } catch (error) {
+        console.error('Error fetching progress:', error);
+        return res.status(500).json({
+            code: 500,
+            status: 'Internal Server Error',
+            data: { message: 'Failed to retrieve progress data' }
+        });
+    }
+};
+
+
+
+module.exports = { addProgress, updateProgressTitle, getProgress };
