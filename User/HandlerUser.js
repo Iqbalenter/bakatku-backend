@@ -19,8 +19,8 @@ const serviceAccount = require(path.resolve(__dirname, '../bakatku-firebase-admi
 const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
-        user: '',
-        pass: '',
+        user: 'highstuff77@gmail.com',
+        pass: 'qsdk popk qcps guhr',
     },
 });
 
@@ -61,7 +61,7 @@ const addUser = async (payload) => {
         const verificationLink = await admin.auth().generateEmailVerificationLink(email);
 
         await transporter.sendMail({
-            from: '',
+            from: 'highstuff77@gmail.com',
             to: email,
             subject: 'Verify your email Bakatku',
             html: `
@@ -134,7 +134,7 @@ const login = async (payload) => {
 
     try {
 
-        const apiKey = '';
+        const apiKey = 'AIzaSyA2VF4gWA-DbVUnK5hcstlZQRmyqcOVxPs';
         const signInUrl = `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${apiKey}`;
         const getUserUrl = `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`;
 
@@ -309,8 +309,90 @@ const editProfile = async (req, res) => {
     }
 };
 
+const googleLogin = async (req, res) => {
+    const { idToken } = req.body;
+
+    if (!idToken) {
+        return res.status(400).json(errorResponse(400, 'ID Token is required'));
+    }
+
+    try {
+        // Verifikasi ID Token dari Google
+        const decodedToken = await admin.auth().verifyIdToken(idToken);
+        const { email, name, picture, uid } = decodedToken;
+
+        if (!email) {
+            return res.status(400).json(errorResponse(400, 'Invalid token: Email not found'));
+        }
+
+        // Cari user di Firestore
+        let userDoc = await firestore.collection('user').where('email', '==', email).get();
+
+        let userId;
+
+                const bucket = admin.storage().bucket(process.env.FIREBASE_STORAGE_BUCKET);
+        if (userDoc.empty) {
+            userId = uid;
+        
+            let photoUrl = '';
+            try {
+                // Ambil gambar dari Google
+                const response = await axios.get(picture, { responseType: 'arraybuffer' });
+                const buffer = Buffer.from(response.data, 'binary');
+        
+                const newFileName = `profile_photos/${userId}/${uuidv4()}.jpg`;
+                const file = bucket.file(newFileName);
+        
+                await file.save(buffer, {
+                    metadata: {
+                        contentType: 'image/jpeg',
+                        metadata: {
+                            firebaseStorageDownloadTokens: uuidv4(), // agar URL bisa diakses publik
+                        },
+                    },
+                });
+        
+                // URL akses publik file dari Firebase Storage
+                photoUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(newFileName)}?alt=media`;
+        
+            } catch (uploadError) {
+                console.warn('Gagal upload foto dari Google:', uploadError.message);
+            }
+        
+            // Simpan user baru
+            await firestore.collection('user').doc(userId).set({
+                email,
+                name: name || '',
+                photoUrl,
+                emailVerified: true,
+                createdAt: Firestore.Timestamp.now()
+            });
+        } else {
+            userId = userDoc.docs[0].id;
+        }
+
+        // Generate JWT token untuk client
+        const token = createToken({
+            id: userId,
+            email
+        });
+
+        return res.status(200).json(successResponse(200, {
+            message: 'Google login successful',
+            token,
+            id: userId,
+            email,
+            name
+        }));
+    } catch (error) {
+        console.error('Google login error:', error);
+        return res.status(401).json(errorResponse(401, 'Invalid Google token'));
+    }
+};
+
+
 
 
 module.exports = {
-    addUser, getUserById, login, getDataProfile, editProfile
+    addUser, getUserById, login, getDataProfile, editProfile, googleLogin
 };
