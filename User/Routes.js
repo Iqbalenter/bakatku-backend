@@ -112,5 +112,31 @@ router.put('/profile/update', validateToken, upload.single('photo'), async (req,
     }
 });
 
+router.get('/auth/check', validateToken, (req, res) => {
+    return res.status(200).json({
+        success: true,
+        data: {
+            message: 'User is authenticated',
+            userId: req.auth.id,
+            email: req.auth.email
+        }
+    });
+});
+
+router.post('/auth/google', async (req, res) => {
+    try {
+        await handler.googleLogin(req, res);
+    } catch (error) {
+        console.error('Error in Google auth route:', error);
+        res.status(500).json({
+            code: 500,
+            status: 'Internal Server Error',
+            data: { message: 'Google login failed' }
+        });
+    }
+});
+
+
+
 
 module.exports = router;
